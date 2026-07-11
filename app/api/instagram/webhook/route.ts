@@ -10,20 +10,37 @@ export async function GET(request: NextRequest) {
     token === process.env.INSTAGRAM_VERIFY_TOKEN &&
     challenge
   ) {
-    return new NextResponse(challenge, { status: 200 });
+    console.log("WEBHOOK_VERIFIED");
+
+    return new NextResponse(challenge, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    });
   }
 
   return NextResponse.json(
     { error: "Webhook verification failed" },
-    { status: 403 }
+    { status: 403 },
   );
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  try {
+    const body = await request.json();
 
-  console.log("Instagram webhook received:");
-  console.log(JSON.stringify(body, null, 2));
+    console.log("Instagram webhook received:");
+    console.dir(body, { depth: null });
 
-  return NextResponse.json({ received: true });
+    // Acknowledge the webhook quickly so Meta does not retry it.
+    return new NextResponse("EVENT_RECEIVED", { status: 200 });
+  } catch (error) {
+    console.error("Unable to process Instagram webhook:", error);
+
+    return NextResponse.json(
+      { error: "Invalid webhook payload" },
+      { status: 400 },
+    );
+  }
 }
